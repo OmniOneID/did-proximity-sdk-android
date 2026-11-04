@@ -1,0 +1,15 @@
+plugins {
+    alias(libs.plugins.android.fused.library)
+}
+
+androidFusedLibrary {
+    namespace = 'org.omnione.did.proximity.sdk.holder.fused'
+    minSdk {
+        version = release(26)
+    }
+}
+
+dependencies {
+    include project(':proximity-holder')
+    include project(':proximity-core')
+}

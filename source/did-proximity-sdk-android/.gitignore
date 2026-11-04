@@ -1,0 +1,19 @@
+# Maestro (E2E)
+.maestro/reports/
+maestro-debug-output/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+
+# 내부 개발 도구 (local-only)
+.claude/
+.serena/
+.taskmaster/
+.mcp.json
+CLAUDE.md
+
+# 내부 문서 · 산출물 (local-only)
+.docs/

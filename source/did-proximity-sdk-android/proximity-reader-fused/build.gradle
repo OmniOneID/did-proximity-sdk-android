@@ -1,0 +1,15 @@
+plugins {
+    alias(libs.plugins.android.fused.library)
+}
+
+androidFusedLibrary {
+    namespace = 'org.omnione.did.proximity.sdk.reader.fused'
+    minSdk {
+        version = release(26)
+    }
+}
+
+dependencies {
+    include project(':proximity-reader')
+    include project(':proximity-core')
+}

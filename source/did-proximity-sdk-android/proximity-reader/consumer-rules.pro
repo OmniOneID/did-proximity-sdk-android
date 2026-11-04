@@ -1,0 +1,5 @@
+-keep public class org.omnione.did.proximity.sdk.reader.ReaderSession { public *; }
+-keep public interface org.omnione.did.proximity.sdk.reader.ReaderSession$Listener { *; }
+-keep public class org.omnione.did.proximity.sdk.reader.ProximityResponse { public *; }
+-keep public class org.omnione.did.proximity.sdk.reader.nfc.NfcEngagementReader { public *; }
+-keep public interface org.omnione.did.proximity.sdk.reader.nfc.NfcEngagementReader$Listener { *; }

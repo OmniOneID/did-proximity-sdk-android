@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="proximity_hce_service_description">Share a mobile document over NFC</string>
+    <string name="proximity_hce_aid_group_description">Mobile document engagement</string>
+    <string name="proximity_hce_data_aid_group_description">Mobile document data retrieval</string>
+</resources>

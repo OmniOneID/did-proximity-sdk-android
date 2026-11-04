@@ -1,0 +1,7 @@
+-keep public class org.omnione.did.proximity.sdk.holder.HolderSession { *; }
+-keep public interface org.omnione.did.proximity.sdk.holder.HolderSession$Listener { *; }
+-keep public class org.omnione.did.proximity.sdk.holder.ProximityRequest { *; }
+-keep public class org.omnione.did.proximity.sdk.holder.nfc.MdocHostApduService { *; }
+-keep public class org.omnione.did.proximity.sdk.holder.NfcEngagementRegistry { public *; }
+-keep public enum org.omnione.did.proximity.sdk.holder.EngagementMethod { *; }
+-keep public class org.omnione.did.proximity.sdk.holder.nfc.NfcEngagementPreference { public *; }
