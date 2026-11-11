@@ -110,36 +110,39 @@ public final class DeviceResponseParser {
 
     @NonNull
     private static String[] validity(@NonNull CBORObject issuerAuth) {
-        String[] none = new String[2];
-        if (issuerAuth.getType() != CBORType.Array || issuerAuth.size() <= COSE_SIGN1_PAYLOAD) {
-            return none;
+        CBORObject mso = mso(issuerAuth);
+        CBORObject validityInfo = mso == null ? null : mso.get(KEY_VALIDITY_INFO);
+        if (validityInfo == null || validityInfo.getType() != CBORType.Map) {
+            return new String[2];
+        }
+        return new String[]{
+                tdate(validityInfo.get(KEY_VALID_FROM)),
+                tdate(validityInfo.get(KEY_VALID_UNTIL))};
+    }
+
+    @Nullable
+    static CBORObject mso(@Nullable CBORObject issuerAuth) {
+        if (issuerAuth == null || issuerAuth.getType() != CBORType.Array
+                || issuerAuth.size() <= COSE_SIGN1_PAYLOAD) {
+            return null;
         }
         CBORObject payload = issuerAuth.get(COSE_SIGN1_PAYLOAD);
         if (payload.getType() != CBORType.ByteString) {
-            return none;
+            return null;
         }
         try {
             CBORObject mso = CBORObject.DecodeFromBytes(payload.GetByteString());
             if (mso.HasMostOuterTag(CborTags.ENCODED_CBOR)) {
                 mso = CBORObject.DecodeFromBytes(CborTags.untag(mso));
             }
-            if (mso.getType() != CBORType.Map) {
-                return none;
-            }
-            CBORObject validityInfo = mso.get(KEY_VALIDITY_INFO);
-            if (validityInfo == null || validityInfo.getType() != CBORType.Map) {
-                return none;
-            }
-            return new String[]{
-                    tdate(validityInfo.get(KEY_VALID_FROM)),
-                    tdate(validityInfo.get(KEY_VALID_UNTIL))};
+            return mso.getType() == CBORType.Map ? mso : null;
         } catch (RuntimeException ignoredMalformedMso) {
-            return none;
+            return null;
         }
     }
 
     @Nullable
-    private static String tdate(@Nullable CBORObject value) {
+    static String tdate(@Nullable CBORObject value) {
         if (value == null) {
             return null;
         }
@@ -150,7 +153,11 @@ public final class DeviceResponseParser {
             return value.AsString();
         }
         if (value.getType() == CBORType.Integer) {
-            return Instant.ofEpochSecond(value.AsInt64Value()).toString();
+            try {
+                return Instant.ofEpochSecond(value.AsInt64Value()).toString();
+            } catch (RuntimeException ignoredOutOfRangeEpoch) {
+                return null;
+            }
         }
         return null;
     }

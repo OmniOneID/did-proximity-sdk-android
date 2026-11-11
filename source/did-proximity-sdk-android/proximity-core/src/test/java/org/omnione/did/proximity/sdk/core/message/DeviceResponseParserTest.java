@@ -183,6 +183,16 @@ public class DeviceResponseParserTest {
     }
 
     @Test
+    public void anOutOfRangeEpochValidityDateIsLeftNull() {
+        CBORObject auth = issuerAuth(false, false,
+                msoPayload(CBORObject.FromObject(100000000000000000L), CBORObject.FromObject(1793577600L)));
+        DeviceResponse parsed = DeviceResponseParser.parse(response(auth, true));
+
+        assertNull(parsed.documents.get(0).validFrom);
+        assertEquals("2026-11-02T00:00:00Z", parsed.documents.get(0).validUntil);
+    }
+
+    @Test
     public void aPayloadWithoutAnMsoLeavesTheValidityDatesNull() {
         DeviceResponse parsed = DeviceResponseParser.parse(response(issuerAuth(false, false), true));
 

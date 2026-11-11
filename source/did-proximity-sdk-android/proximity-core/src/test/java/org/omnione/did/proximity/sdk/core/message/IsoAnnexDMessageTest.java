@@ -33,7 +33,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.CertificateFactory;
 import java.security.interfaces.ECPublicKey;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class IsoAnnexDMessageTest {
@@ -45,6 +47,7 @@ public class IsoAnnexDMessageTest {
 
     private static final String DOC_TYPE = "org.iso.18013.5.1.mDL";
     private static final String NAME_SPACE = "org.iso.18013.5.1";
+    private static final Instant WITHIN_VALIDITY = Instant.parse("2021-01-01T00:00:00Z");
 
     @Test
     public void parsesTheIsoDeviceRequest() {
@@ -150,6 +153,93 @@ public class IsoAnnexDMessageTest {
 
         assertFalse(IssuerAuthVerifier.verify(
                 issuerAuth.EncodeToBytes(), documentSignerKey(document)));
+    }
+
+    @Test
+    public void theIsoMsoPassesWithinItsValidityPeriod() {
+        List<MsoCheck> checks = MsoCheck.verify(resource(MDOC_RESPONSE), WITHIN_VALIDITY);
+
+        assertEquals(1, checks.size());
+        assertEquals(checks.get(0).detail, MsoCheck.Outcome.PASSED, checks.get(0).outcome);
+    }
+
+    @Test
+    public void aTamperedIsoElementValueFailsTheDigest() {
+        MsoCheck check = MsoCheck.verify(tamperedFamilyName(), WITHIN_VALIDITY).get(0);
+
+        assertEquals(MsoCheck.Outcome.DIGEST_FAILED, check.outcome);
+        assertTrue(check.detail, check.detail.startsWith("digest mismatch for 0"));
+    }
+
+    @Test
+    public void theIsoMsoFailsBeforeValidFrom() {
+        MsoCheck check = MsoCheck.verify(resource(MDOC_RESPONSE),
+                Instant.parse("2020-10-01T13:30:01Z")).get(0);
+
+        assertEquals(MsoCheck.Outcome.VALIDITY_FAILED, check.outcome);
+    }
+
+    @Test
+    public void theIsoMsoFailsAfterValidUntil() {
+        MsoCheck check = MsoCheck.verify(resource(MDOC_RESPONSE),
+                Instant.parse("2021-10-01T13:30:03Z")).get(0);
+
+        assertEquals(MsoCheck.Outcome.VALIDITY_FAILED, check.outcome);
+    }
+
+    @Test
+    public void theIsoMsoPassesOnBothValidityBoundaries() {
+        assertTrue(MsoCheck.verify(resource(MDOC_RESPONSE),
+                Instant.parse("2020-10-01T13:30:02Z")).get(0).passed());
+        assertTrue(MsoCheck.verify(resource(MDOC_RESPONSE),
+                Instant.parse("2021-10-01T13:30:02Z")).get(0).passed());
+    }
+
+    @Test
+    public void aTamperedDocumentFailsAloneNextToAnIntactOne() {
+        CBORObject response = CBORObject.DecodeFromBytes(resource(MDOC_RESPONSE));
+        response.get("documents").Add(
+                CBORObject.DecodeFromBytes(tamperedFamilyName()).get("documents").get(0));
+        byte[] encoded = response.EncodeToBytes();
+
+        assertEquals(2, DeviceResponseParser.parse(encoded).documents.size());
+        List<MsoCheck> checks = MsoCheck.verify(encoded, WITHIN_VALIDITY);
+        assertEquals(MsoCheck.Outcome.PASSED, checks.get(0).outcome);
+        assertEquals(MsoCheck.Outcome.DIGEST_FAILED, checks.get(1).outcome);
+    }
+
+    @Test
+    public void aMalformedValidFromFailsTheValidity() {
+        CBORObject response = CBORObject.DecodeFromBytes(resource(MDOC_RESPONSE));
+        CBORObject issuerAuth = response.get("documents").get(0)
+                .get("issuerSigned").get("issuerAuth");
+        CBORObject mso = CBORObject.DecodeFromBytes(
+                CBORObject.DecodeFromBytes(issuerAuth.get(2).GetByteString()).GetByteString());
+        mso.get("validityInfo").set("validFrom", CBORObject.FromObject("2020-10-01").WithTag(0));
+        issuerAuth.set(2, CBORObject.FromObject(
+                CBORObject.FromObject(mso.EncodeToBytes()).WithTag(24).EncodeToBytes()));
+
+        MsoCheck check = MsoCheck.verify(response.EncodeToBytes(), WITHIN_VALIDITY).get(0);
+
+        assertEquals(check.detail, MsoCheck.Outcome.VALIDITY_FAILED, check.outcome);
+    }
+
+    @Test
+    public void undecodableBytesYieldNoMsoChecks() {
+        assertTrue(MsoCheck.verify(new byte[]{(byte) 0xFF}, WITHIN_VALIDITY).isEmpty());
+    }
+
+    private static byte[] tamperedFamilyName() {
+        CBORObject response = CBORObject.DecodeFromBytes(resource(MDOC_RESPONSE));
+        CBORObject items = response.get("documents").get(0)
+                .get("issuerSigned").get("nameSpaces").get(NAME_SPACE);
+        byte[] item = items.get(0).GetByteString();
+        CBORObject decoded = CBORObject.DecodeFromBytes(item);
+        assertEquals("Doe", decoded.get("elementValue").AsString());
+        item[item.length - 1] ^= 0x01;
+        assertEquals("Dod", CBORObject.DecodeFromBytes(item).get("elementValue").AsString());
+        items.set(0, CBORObject.FromObject(item).WithTag(24));
+        return response.EncodeToBytes();
     }
 
     private static ECPublicKey documentSignerKey(Document document) throws Exception {

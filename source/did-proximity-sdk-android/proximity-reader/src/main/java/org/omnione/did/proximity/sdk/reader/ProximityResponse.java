@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 
 import org.omnione.did.proximity.sdk.core.message.DeviceAuthResult;
 import org.omnione.did.proximity.sdk.core.message.Document;
+import org.omnione.did.proximity.sdk.core.message.MsoCheck;
 
 import java.util.Collections;
 import java.util.List;
@@ -31,17 +32,20 @@ public final class ProximityResponse {
     @NonNull public final byte[] deviceResponse;
     @NonNull public final byte[] sessionTranscript;
     @NonNull public final List<DeviceAuthResult> deviceAuth;
+    @NonNull public final List<MsoCheck> msoChecks;
 
     ProximityResponse(@NonNull List<Document> documents,
                       int documentStatus,
                       @NonNull byte[] deviceResponse,
                       @NonNull byte[] sessionTranscript,
-                      @NonNull List<DeviceAuthResult> deviceAuth) {
+                      @NonNull List<DeviceAuthResult> deviceAuth,
+                      @NonNull List<MsoCheck> msoChecks) {
         this.documents = Collections.unmodifiableList(documents);
         this.documentStatus = documentStatus;
         this.deviceResponse = deviceResponse.clone();
         this.sessionTranscript = sessionTranscript.clone();
         this.deviceAuth = Collections.unmodifiableList(deviceAuth);
+        this.msoChecks = Collections.unmodifiableList(msoChecks);
     }
 
     public boolean deviceAuthVerified() {

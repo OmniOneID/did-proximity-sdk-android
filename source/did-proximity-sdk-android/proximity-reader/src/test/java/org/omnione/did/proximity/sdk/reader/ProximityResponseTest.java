@@ -36,7 +36,7 @@ public class ProximityResponseTest {
 
         ProximityResponse response = new ProximityResponse(
                 new ArrayList<>(), 0, deviceResponse, sessionTranscript,
-                Collections.emptyList());
+                Collections.emptyList(), Collections.emptyList());
         deviceResponse[0] = (byte) 0xFF;
         sessionTranscript[0] = (byte) 0xFF;
 
@@ -48,7 +48,7 @@ public class ProximityResponseTest {
     public void aResponseWithoutADocumentIsVerifiedVacuously() {
         ProximityResponse response = new ProximityResponse(
                 new ArrayList<>(), 0, new byte[]{1}, new byte[]{2},
-                Collections.emptyList());
+                Collections.emptyList(), Collections.emptyList());
 
         assertTrue(response.deviceAuthVerified());
     }
@@ -59,7 +59,8 @@ public class ProximityResponseTest {
         documents.add(null);
 
         ProximityResponse response = new ProximityResponse(
-                documents, 0, new byte[]{1}, new byte[]{2}, Collections.emptyList());
+                documents, 0, new byte[]{1}, new byte[]{2}, Collections.emptyList(),
+                Collections.emptyList());
 
         assertFalse(response.deviceAuthVerified());
     }

@@ -41,6 +41,7 @@ import org.omnione.did.proximity.sdk.core.message.DeviceResponse;
 import org.omnione.did.proximity.sdk.core.message.DeviceResponseParser;
 import org.omnione.did.proximity.sdk.core.message.Document;
 import org.omnione.did.proximity.sdk.core.message.ItemsRequest;
+import org.omnione.did.proximity.sdk.core.message.MsoCheck;
 import org.omnione.did.proximity.sdk.core.nfc.ApduChannel;
 import org.omnione.did.proximity.sdk.core.nfc.NfcHandoverResult;
 import org.omnione.did.proximity.sdk.core.nfc.NfcHandoverResults;
@@ -63,6 +64,7 @@ import org.omnione.did.proximity.sdk.core.util.HandlerDeadline;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.interfaces.ECPublicKey;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -606,11 +608,14 @@ public final class ReaderSession {
         List<DeviceAuthResult> deviceAuth = verifyDeviceAuth(
                 plaintext, transcriptSnapshot, readerPrivate);
         logDeviceAuth(parsed.documents, deviceAuth);
+        List<MsoCheck> msoChecks = MsoCheck.verify(plaintext, Instant.now());
+        logMsoChecks(parsed.documents, msoChecks);
         if (!claimEnd()) {
             return;
         }
         listener.onResponse(new ProximityResponse(
-                parsed.documents, parsed.status, plaintext, transcriptSnapshot, deviceAuth));
+                parsed.documents, parsed.status, plaintext, transcriptSnapshot, deviceAuth,
+                msoChecks));
         closeTransport(status == null);
         listener.onTerminated();
     }
@@ -647,6 +652,30 @@ public final class ReaderSession {
             String line = "device auth [" + i + "] docType=" + docType
                     + " outcome=" + result.outcome + " method=" + result.method;
             if (result.verified()) {
+                logger.d(line);
+            } else {
+                logger.e(line + " detail=" + result.detail);
+            }
+        }
+    }
+
+    private static void logMsoChecks(@NonNull List<Document> documents,
+                                     @NonNull List<MsoCheck> results) {
+        ProximityLogger logger = ProximityLogger.getInstance();
+        if (documents.size() != results.size()) {
+            logger.e("mso checks " + results.size()
+                    + " do not match documents " + documents.size());
+        }
+        for (int i = 0; i < documents.size(); i++) {
+            String docType = documents.get(i) == null ? "?" : documents.get(i).docType;
+            if (i >= results.size()) {
+                logger.e("mso check [" + i + "] docType=" + docType + " outcome=missing");
+                continue;
+            }
+            MsoCheck result = results.get(i);
+            String line = "mso check [" + i + "] docType=" + docType
+                    + " outcome=" + result.outcome;
+            if (result.passed()) {
                 logger.d(line);
             } else {
                 logger.e(line + " detail=" + result.detail);
