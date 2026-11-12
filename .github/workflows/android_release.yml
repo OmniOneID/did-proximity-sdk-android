@@ -25,6 +25,8 @@ jobs:
           distribution: 'temurin'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
       - name: Build Release AAR
         run: |
           bash ./gradlew :proximity-holder-fused:bundle :proximity-reader-fused:bundle --stacktrace
